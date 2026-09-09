@@ -24,6 +24,14 @@ export const sessionRepository = {
     ).select('+tokenHash').lean().exec() as Promise<ISession | null>;
   },
 
+  consumeCurrent(tokenHash: string) {
+    return SessionModel.findOneAndUpdate(
+      { tokenHash, state: 'current', expiresAt: { $gt: new Date() } },
+      { $set: { state: 'used' as SessionState, usedAt: new Date() } },
+      { new: true, runValidators: true },
+    ).select('+tokenHash').lean().exec() as Promise<ISession | null>;
+  },
+
   revokeFamily(familyId: string, reason: string) {
     return SessionModel.updateMany(
       { familyId, state: { $in: ['current', 'used'] } },
@@ -34,6 +42,13 @@ export const sessionRepository = {
   revokeUserSessions(userId: ObjectId, reason: string) {
     return SessionModel.updateMany(
       { userId, state: { $in: ['current', 'used'] } },
+      { $set: { state: 'revoked', revokedAt: new Date(), revocationReason: reason } },
+    ).exec();
+  },
+
+  revokeByTokenHash(tokenHash: string, reason: string) {
+    return SessionModel.updateOne(
+      { tokenHash, state: { $in: ['current', 'used'] } },
       { $set: { state: 'revoked', revokedAt: new Date(), revocationReason: reason } },
     ).exec();
   },

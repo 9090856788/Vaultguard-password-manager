@@ -29,6 +29,36 @@ export const userRepository = {
   incrementSecurityVersion(userId: ObjectId) {
     return UserModel.updateOne({ _id: userId, deletedAt: null }, { $inc: { accountSecurityVersion: 1 } }).exec();
   },
+
+  updatePasswordVerifier(userId: ObjectId, accountPasswordVerifier: string, lastPasswordChangeAt: Date, verifier: IUser['verifier']) {
+    return UserModel.findOneAndUpdate(
+      { _id: userId, deletedAt: null },
+      { $set: { accountPasswordVerifier, lastPasswordChangeAt, verifier }, $inc: { accountSecurityVersion: 1 } },
+      { new: true, runValidators: true },
+    ).select(SAFE_USER_PROJECTION).lean().exec() as Promise<IUser | null>;
+  },
+
+  updateProfile(userId: ObjectId, update: Pick<IUser, 'fullName' | 'avatarUrl' | 'preferences'>) {
+    return UserModel.findOneAndUpdate(
+      { _id: userId, deletedAt: null },
+      { $set: update },
+      { new: true, runValidators: true },
+    ).select(SAFE_USER_PROJECTION).lean().exec() as Promise<IUser | null>;
+  },
+
+  recordFailedLogin(userId: ObjectId, failedAttempts: number, lastFailureAt: Date, progressiveDelayUntil?: Date, lockedUntil?: Date) {
+    return UserModel.updateOne(
+      { _id: userId, deletedAt: null },
+      { $set: { 'lockout.failedAttempts': failedAttempts, 'lockout.lastFailureAt': lastFailureAt, 'lockout.progressiveDelayUntil': progressiveDelayUntil, 'lockout.lockedUntil': lockedUntil } },
+    ).exec();
+  },
+
+  clearLockout(userId: ObjectId) {
+    return UserModel.updateOne(
+      { _id: userId, deletedAt: null },
+      { $set: { 'lockout.failedAttempts': 0 }, $unset: { 'lockout.lastFailureAt': 1, 'lockout.progressiveDelayUntil': 1, 'lockout.lockedUntil': 1 } },
+    ).exec();
+  },
 };
 
 export { SAFE_USER_PROJECTION };

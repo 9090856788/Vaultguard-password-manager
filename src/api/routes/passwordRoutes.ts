@@ -1,11 +1,12 @@
 import { Router } from 'express';
 import { passwordController } from '../controllers/passwordController';
 import { authenticateToken } from '../middlewares/authMiddleware';
+import { encryptedVaultRequired } from '../middleware/vaultAvailability';
 
 const router = Router();
 
 // Apply auth middleware to all password routes
-router.use(authenticateToken);
+router.use(authenticateToken, encryptedVaultRequired);
 
 router.get('/', passwordController.getPasswords);
 router.post('/', passwordController.createPassword);

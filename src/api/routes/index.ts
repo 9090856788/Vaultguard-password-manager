@@ -7,25 +7,34 @@ import auditRoutes from './auditRoutes';
 import vaultRoutes from './vaultRoutes';
 import { authController } from '../controllers/authController';
 import { authenticateToken } from '../middlewares/authMiddleware';
+import { requestId } from '../middleware/requestId';
+import { asyncHandler } from '../middleware/asyncHandler';
+import { isDatabaseConnected } from '../config/database';
 
 const apiRouter = Router();
 
+apiRouter.use(requestId);
+
+export function healthHandler(_req: unknown, res: { json: (body: unknown) => void }) {
+  res.json({ status: 'ok', service: 'ShieldVault REST API', version: '1.0.0', timestamp: new Date().toISOString() });
+}
+
+export function readinessHandler(_req: unknown, res: { status: (code: number) => { json: (body: unknown) => void } }) {
+  const ready = isDatabaseConnected();
+  res.status(ready ? 200 : 503).json({ status: ready ? 'ready' : 'not_ready' });
+}
+
 // Health Check
-apiRouter.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    service: 'ShieldVault REST API',
-    version: '1.0.0',
-    timestamp: new Date().toISOString(),
-  });
-});
+apiRouter.get('/health', healthHandler);
+
+apiRouter.get('/health/ready', readinessHandler);
 
 // Auth Routes (/api/v1/auth)
 apiRouter.use('/auth', authRoutes);
 
 // Direct User Profile Alias Routes (/api/v1/user/profile & /api/v1/user/change-password)
-apiRouter.put('/user/profile', authenticateToken, authController.updateProfile);
-apiRouter.post('/user/change-password', authenticateToken, authController.changePassword);
+apiRouter.put('/user/profile', authenticateToken, asyncHandler(authController.updateProfile));
+apiRouter.post('/user/change-password', authenticateToken, asyncHandler(authController.changePassword));
 
 // Password CRUD Routes (/api/v1/passwords)
 apiRouter.use('/passwords', passwordRoutes);

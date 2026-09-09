@@ -3,8 +3,10 @@ import path from 'path';
 import cors from 'cors';
 import { createServer as createViteServer } from 'vite';
 import createApiApp from './src/api/app';
+import { connectDatabase, disconnectDatabase } from './src/api/config/database';
 
 async function startServer() {
+  await connectDatabase();
   const app = express();
   const PORT = Number(process.env.PORT) || 3000;
 
@@ -30,9 +32,18 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`[ShieldVault API] Enterprise Modular MVC Backend running at http://0.0.0.0:${PORT}`);
   });
+
+  const shutdown = async () => {
+    server.close(async () => {
+      await disconnectDatabase();
+      process.exit(0);
+    });
+  };
+  process.once('SIGINT', shutdown);
+  process.once('SIGTERM', shutdown);
 }
 
 startServer().catch((err) => {

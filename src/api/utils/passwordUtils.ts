@@ -1,4 +1,14 @@
 import bcrypt from 'bcryptjs';
+import argon2 from 'argon2';
+
+export const ARGON2ID_VERIFIER = {
+  algorithm: 'argon2id' as const,
+  version: 1,
+  memoryKiB: 65536,
+  timeCost: 3,
+  parallelism: 1,
+  outputBytes: 32,
+};
 
 export function calculatePasswordStrength(password: string): {
   score: number;
@@ -48,10 +58,18 @@ export function calculatePasswordStrength(password: string): {
 }
 
 export async function hashPassword(password: string): Promise<string> {
-  const salt = await bcrypt.genSalt(10);
-  return bcrypt.hash(password, salt);
+  return argon2.hash(password, {
+    type: argon2.argon2id,
+    memoryCost: ARGON2ID_VERIFIER.memoryKiB,
+    timeCost: ARGON2ID_VERIFIER.timeCost,
+    parallelism: ARGON2ID_VERIFIER.parallelism,
+    hashLength: ARGON2ID_VERIFIER.outputBytes,
+  });
 }
 
 export async function comparePassword(password: string, hash: string): Promise<boolean> {
-  return bcrypt.compare(password, hash);
+  if (hash.startsWith('$2a$') || hash.startsWith('$2b$') || hash.startsWith('$2y$')) {
+    return bcrypt.compare(password, hash);
+  }
+  return argon2.verify(hash, password);
 }

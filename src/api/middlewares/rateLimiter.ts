@@ -7,36 +7,45 @@ interface RateLimitRecord {
 
 const rateLimitStore = new Map<string, RateLimitRecord>();
 
-export function createRateLimiter(options: { windowMs: number; maxRequests: number; message?: string }) {
-  const { windowMs, maxRequests, message = 'Too many requests, please try again later.' } = options;
+function requestIp(req: Request): string {
+  return req.ip || req.socket.remoteAddress || 'unknown_ip';
+}
+
+export function createRateLimiter(options: {
+  windowMs: number;
+  maxRequests: number;
+  message?: string;
+  accountKey?: (req: Request) => string | undefined;
+}) {
+  const { windowMs, maxRequests, message = 'Too many requests, please try again later.', accountKey } = options;
 
   return (req: Request, res: Response, next: NextFunction) => {
-    const forwarded = req.headers['x-forwarded-for'];
-    const ip = req.ip || (Array.isArray(forwarded) ? forwarded[0] : forwarded) || req.socket.remoteAddress || 'unknown_ip';
-    const key = `${req.baseUrl}_${ip}`;
+    const keys = [`ip:${req.baseUrl}:${requestIp(req)}`];
+    const account = accountKey?.(req);
+    if (account) keys.push(`account:${req.baseUrl}:${account}`);
     const now = Date.now();
 
-    let record = rateLimitStore.get(key);
+    const records = keys.map((key) => {
+      let record = rateLimitStore.get(key);
+      if (!record || now > record.resetTime) {
+        record = { count: 1, resetTime: now + windowMs };
+        rateLimitStore.set(key, record);
+      } else {
+        record.count += 1;
+      }
+      return record;
+    });
 
-    if (!record || now > record.resetTime) {
-      record = {
-        count: 1,
-        resetTime: now + windowMs,
-      };
-      rateLimitStore.set(key, record);
-    } else {
-      record.count += 1;
-    }
-
-    const remaining = Math.max(0, maxRequests - record.count);
+    const limitingRecord = records.find((record) => record.count > maxRequests);
+    const remaining = Math.max(0, ...records.map((record) => maxRequests - record.count));
     res.setHeader('X-RateLimit-Limit', maxRequests);
     res.setHeader('X-RateLimit-Remaining', remaining);
-    res.setHeader('X-RateLimit-Reset', Math.ceil(record.resetTime / 1000));
+    res.setHeader('X-RateLimit-Reset', Math.ceil(Math.max(...records.map((record) => record.resetTime)) / 1000));
 
-    if (record.count > maxRequests) {
+    if (limitingRecord) {
       res.status(429).json({
         error: message,
-        retryAfterSeconds: Math.ceil((record.resetTime - now) / 1000),
+        retryAfterSeconds: Math.ceil((limitingRecord.resetTime - now) / 1000),
       });
       return;
     }
@@ -57,4 +66,8 @@ export const authRateLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000,
   maxRequests: 20,
   message: 'Too many authentication attempts. Please try again after 15 minutes.',
+  accountKey: (req) => {
+    const email = req.body?.email;
+    return typeof email === 'string' && email.trim() ? email.trim().toLowerCase() : undefined;
+  },
 });
