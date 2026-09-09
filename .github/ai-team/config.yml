@@ -3,6 +3,60 @@ project: VaultGuard Password Manager
 quality_target:
   target: 95%
   note: "A quality target, not a guarantee. Evidence comes from gates, tests, independent review, and reproducible checks."
+target_stack:
+  frontend:
+    framework: React
+    language: TypeScript
+    build: Vite
+    routing: React Router
+    styling: CSS Modules
+    responsive: CSS media queries
+    client_state: Redux Toolkit
+    server_state: TanStack Query
+  backend:
+    runtime: Node.js
+    framework: Express.js
+    language: TypeScript
+    architecture: MVC
+    api: REST
+    documentation: Swagger/OpenAPI
+  database:
+    engine: MongoDB
+    access: Mongoose
+    orm: none
+  caching:
+    current: MongoDB
+    redis: deferred_until_justified_by_scale
+  security:
+    password_hashing: Argon2id
+    vault_model: client_side_encryption_target
+    cryptography: audited_standard_primitives_and_libraries
+  ai:
+    phase_1: skeleton_and_provider_abstraction_only
+    provider: Gemini
+    phase_2: full_AI_features
+  testing:
+    unit: Vitest
+    component: React Testing Library
+    api: Supertest
+    e2e: Playwright
+  tooling:
+    lint: ESLint
+    formatting: Prettier
+    containers: Docker
+    ci_cd: GitHub Actions
+  observability:
+    initial: structured_logging_and_health_checks
+    later: OpenTelemetry_and_error_tracking
+architecture_principles:
+  - simple_understandable_modular_monolith
+  - backend_route_controller_service_model_flow
+  - no_direct_database_access_from_controllers
+  - clean_separation_of_client_and_server_state
+  - explicit_security_crypto_ai_and_data_boundaries
+  - industry_standard_naming_conventions
+  - clean_readable_maintainable_code
+  - no_premature_microservices_or_infrastructure
 integrations:
   github:
     enabled: true
