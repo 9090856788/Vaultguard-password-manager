@@ -1,8 +1,13 @@
-# Database Architecture (Target)
+# Database Architecture (Historical Draft)
 
 **Date:** September 2026  
-**Gate:** G4 - Database Architecture + JSON-to-Mongo Migration Planning
+**Gate:** Historical G2/G3 draft; superseded for G4
 **Focus:** MongoDB + Mongoose Collections, Schema Design, Migration
+
+> The authoritative G4 model is in [database-schema.md](database-schema.md),
+> [index-strategy.md](index-strategy.md), and [data-integrity.md](data-integrity.md).
+> This retained draft is historical context only and must not be used to
+> implement the target schema.
 
 The security boundaries in `docs/security/g3-authoritative-baseline.md` are
 mandatory constraints for this document.
@@ -148,57 +153,12 @@ unique: (userId, name, deletedAt=null)
 immutable: userId, createdAt
 ```
 
-### 2.3 Collection: vaultitems (Password Entries)
+### 2.3 Collection: vaultitems
 
-**Purpose:** Individual password entries within vaults
-
-```typescript
-db.vaultitems = {
-  _id: ObjectId,
-  vaultId: ObjectId,                          // FK to vaults
-  createdBy: ObjectId,                        // FK to users (who created)
-
-  // Basic fields
-  host: String,                               // searchable metadata only when justified
-  username: String,                            // searchable metadata only when justified
-  encryptedSecrets: Object,                    // password, notes, TOTP, recovery, custom secrets
-  keyId: String,
-  envelopeVersion: Number,
-  revision: Number,
-
-  // Optional metadata
-  url: String,                                // e.g., "https://github.com/login"
-  // Secure notes are inside encryptedSecrets; no plaintext notes field.
-  categoryId: ObjectId,                       // FK to categories (optional)
-  tags: [String],                             // Up to 10 tags
-
-  // Security assessment
-  strength: String,                           // 'weak' | 'good' | 'strong'
-  lastBreachCheck: Date,                      // Phase 2: If breached
-
-  // Soft delete
-  deletedAt: Date,
-
-  // Audit
-  createdAt: Date,
-  updatedAt: Date
-}
-
-// Indexes
-db.vaultitems.createIndex({ vaultId: 1, deletedAt: 1 })
-// No unique { host, vaultId } index: multiple credentials per host are valid.
-db.vaultitems.createIndex({ strength: 1 })
-db.vaultitems.createIndex({ tags: 1 })
-db.vaultitems.createIndex({ createdBy: 1 })
-db.vaultitems.createIndex({ createdAt: -1 })
-
-// Constraints
-FK: vaultId → vaults._id
-FK: createdBy → users._id
-FK: categoryId → categories._id (optional)
-No unique host/vault constraint; multiple credentials per host are supported.
-immutable: vaultId, createdBy, createdAt
-```
+The obsolete historical VaultItem example is intentionally removed. The
+authoritative target is defined in [database-schema.md](database-schema.md),
+where server-visible metadata is separated from `encryptedSecrets`. This
+historical draft must not be used as a target schema.
 
 ### 2.4 Collection: categories
 
@@ -755,13 +715,10 @@ export async function migrateJsonToMongoDB() {
         vaultId,
         host: password.host || password.site || "Unknown",
         username: password.username || "",
-        // Legacy plaintext must enter quarantine, not final VaultItem fields.
+        // Legacy plaintext must enter controlled quarantine, not a target item.
         migrationState: "quarantined-plaintext",
         legacySecretReference: createQuarantineReference(password.id),
-        notes: password.notes,
         categoryId: categoryMap.get(password.categoryId) || undefined,
-        strength: password.strength || "good",
-        createdBy: userId,
         createdAt: password.createdAt || new Date(),
         updatedAt: password.updatedAt || new Date(),
       });

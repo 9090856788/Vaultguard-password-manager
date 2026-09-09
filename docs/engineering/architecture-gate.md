@@ -85,21 +85,21 @@
 
 - [docs/security/authentication-architecture.md](docs/security/authentication-architecture.md)
   - Registration/Login/Logout flows
-  - JWT token management (15min access, 7day refresh)
+  - G3 target: short-lived access token and server-tracked refresh session
   - Session revocation mechanism
   - Failed login attempt tracking
   - Account lockout (5 failures, 30 min)
-  - Phase 3 recommendation: HttpOnly cookies
+  - G3 target: Secure, HttpOnly, SameSite cookies with CSRF protection
   - Rate limiting strategy
   - 2FA extensibility
 
 **Vault Security Architecture:**
 
 - [docs/security/vault-security-architecture.md](docs/security/vault-security-architecture.md)
-  - Phase 1: Honest security model (HTTPS, bcrypt, rate limiting, audit logging)
-  - Phase 2+: Client-side encryption roadmap (AES-256-GCM, Argon2id)
-  - Landing page update (MANDATORY for Phase 1)
-  - Zero-knowledge architecture (Phase 3+ only)
+  - Current prototype: HTTPS, bcrypt, rate limiting, and audit logging claims require source verification
+  - G3 target: client-side AES-256-GCM encryption with Argon2id KEK and random VEK
+  - Landing page must remain honest until G5 implementation is verified
+  - Zero-knowledge is unsupported until implemented and audited
   - Key management strategy
   - Re-encryption on password change
   - Import/export encryption
@@ -108,8 +108,8 @@
 **Migration Strategy:**
 
 - [docs/database/migration-strategy.md](docs/database/migration-strategy.md)
-  - Pre-migration checklist
-  - 4-phase migration plan
+  - G4 migration readiness checklist
+  - deterministic, checkpointed migration plan
   - Data transformation logic
   - Rollback procedures
   - Comprehensive testing strategy
@@ -132,12 +132,12 @@
 **Solution:**
 
 - Landing page MUST be updated immediately
-- Show actual Phase 1 capabilities: HTTPS, bcrypt, rate limiting, audit logging
+- Keep current security claims limited to behavior verified in source and tests
 - Add honest security roadmap
-- Phase 2+: Implement actual encryption
-- Phase 3+: Achieve true zero-knowledge
+- G5: Implement the approved encrypted vault architecture
+- G7: Independently audit the resulting security claims
 
-**Status:** Documented in vault-security-architecture.md (requires Phase 1 update)
+**Status:** Documented in vault-security-architecture.md; implementation remains a G5 prerequisite
 
 #### ✅ P0 Issue 2: Refresh Tokens in localStorage
 
@@ -145,12 +145,12 @@
 
 **Solution:**
 
-- Phase 1: Continue localStorage (known risk)
-- Phase 3 (RECOMMENDED): Move to HttpOnly cookies
-- Document as security debt
-- Prioritize for Phase 3
+- G3 target: move refresh sessions to Secure, HttpOnly, SameSite cookies
+- Add mandatory refresh rotation, reuse detection, family revocation, logout,
+  and CSRF protection during G5 implementation
+- Document the current localStorage behavior as a P0 implementation blocker
 
-**Status:** Documented in authentication-architecture.md with Phase 3 recommendation
+**Status:** Documented in authentication-architecture.md; implementation is a G5 prerequisite
 
 #### ✅ P0 Issue 3: Plaintext Password Storage
 
@@ -158,10 +158,9 @@
 
 **Solution:**
 
-- Phase 1: Migrate to MongoDB (same security model for now)
-- Phase 1: Document as planned encryption
-- Phase 2+: Implement client-side AES-256-GCM encryption
-- Keep honest landing page
+- Quarantine legacy plaintext during G4 planning
+- Require owner-assisted client-side AES-256-GCM encryption before final item writes
+- Keep the landing page claims unsupported until G5/G6/G7 verification
 
 **Status:** Documented, timeline included
 
@@ -201,8 +200,8 @@
 | **Frontend**       | React 19 + React Router + Redux + TanStack Query + CSS Modules | ✅ Yes       | ✅ Ready                       |
 | **Backend**        | Express + TypeScript + MVC                                     | ✅ Yes       | ✅ Ready                       |
 | **Database**       | MongoDB + Mongoose                                             | ✅ Yes       | ✅ Ready                       |
-| **Authentication** | JWT + Sessions                                                 | ✅ Yes       | ✅ Ready (Phase 3 improvement) |
-| **Encryption**     | Phase 1: Honest model, Phase 2+: AES-256-GCM                   | ✅ Yes       | ✅ Documented                  |
+| **Authentication** | JWT + server-tracked sessions                                  | ✅ Target    | ⏳ G5 implementation           |
+| **Encryption**     | G3 target AES-256-GCM with Argon2id KEK and random VEK          | ✅ Target    | ⏳ G5 implementation           |
 | **API**            | REST + Swagger/OpenAPI                                         | ✅ Partially | ⏳ Phase 7                     |
 | **Testing**        | Vitest + RTL + Supertest + Playwright                          | ✅ Strategy  | ⏳ Phase 7                     |
 | **Logging**        | pino (structured)                                              | ✅ Yes       | ✅ Ready                       |
@@ -332,7 +331,10 @@ Router → Controller → Service → Repository → Model → MongoDB
 
 ### 2.5 Encryption Strategy (Phase 1 vs. Phase 2+)
 
-**Decision:** Phase 1 - Honest model (passwords plaintext on server), Phase 2+ - Client-side encryption
+> Historical G2 proposal. Superseded by the approved G3 baseline and retained
+> only to explain the original architecture decision.
+
+**Historical decision:** Phase 1 - Honest model (passwords plaintext on server), Phase 2+ - Client-side encryption
 
 **Phase 1 Reality:**
 
@@ -342,7 +344,7 @@ Router → Controller → Service → Repository → Model → MongoDB
 - Not zero-knowledge (server has access)
 - Landing page MUST reflect this honestly
 
-**Phase 2+ Roadmap:**
+**Historical Phase 2+ Roadmap:**
 
 - Client-side AES-256-GCM encryption
 - Argon2id key derivation
@@ -350,7 +352,7 @@ Router → Controller → Service → Repository → Model → MongoDB
 - Re-encryption on password change
 - True zero-knowledge architecture
 
-**Rationale:**
+**Historical Rationale:**
 
 - Phase 1: Get MVP working, documented security model
 - Phase 2: Implement encryption without rushing/mistakes
@@ -476,7 +478,7 @@ Router → Controller → Service → Repository → Model → MongoDB
 
 ---
 
-### Next Gate (G3): Security/Crypto Review ⏳
+### Historical G3 Gate Record: Security/Crypto Review
 
 **Scope:**
 
@@ -490,15 +492,14 @@ Router → Controller → Service → Repository → Model → MongoDB
 
 **Owner:** security-crypto-architect
 
-**Timeline:** After G2 approval, schedule within 1 week
+**Timeline:** Completed and synchronized in `docs/security/g3-authoritative-baseline.md`
 
-**Criteria:**
+**Completed G3 outcome:**
 
-- [ ] Authentication architecture approved
-- [ ] Phase 1 encryption model approved
-- [ ] Phase 2+ encryption roadmap approved
-- [ ] No security vulnerabilities identified
-- [ ] Landing page updates approved
+- [x] Authentication target architecture approved with conditions
+- [x] G3 vault encryption target approved with conditions
+- [x] Unsupported current security claims documented
+- [x] G4 database and migration planning opened as the next gate
 
 ---
 
@@ -670,10 +671,10 @@ ADRs created for major decisions (to be filed under docs/decisions/):
 3. ADR-003: React Router v6 (routing)
 4. ADR-004: JWT + SessionToken (auth model)
 5. ADR-005: CSS Modules (styling)
-6. ADR-006: AES-256-GCM (encryption, Phase 2+)
-7. ADR-007: Client-side encryption (zero-knowledge, Phase 2+)
+6. ADR-006: AES-256-GCM (G3 target)
+7. ADR-007: Client-side encryption (G3 target)
 8. ADR-008: Mongoose vs. Prisma (ORM choice)
-9. ADR-009: HttpOnly cookies (Phase 3)
+9. ADR-009: HttpOnly cookies (G3 target, G5 implementation)
 10. ADR-010: Visual regression testing (CSS migration)
 
 _(ADR files to be created post-G2 approval)_

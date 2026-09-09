@@ -1,9 +1,13 @@
 # VaultGuard System Architecture (Target)
 
-**Date:** September 2026  
-**Gate:** G2 - Architecture Review  
-**Status:** Architecture Design Phase  
+**Date:** September 2026
+**Gate:** G4 - Database Architecture + JSON-to-Mongo Migration Planning
+**Status:** Target architecture; database details are governed by G4 documents
 **Branch:** `tech-stack-migration`
+
+> This system overview is retained as a cross-layer target. The G3 security
+> baseline and G4 database documents are authoritative for security and
+> persistence decisions.
 
 ---
 

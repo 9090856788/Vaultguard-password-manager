@@ -35,8 +35,9 @@ Each gate should be explicitly reported as `READY`, `BLOCKED`, or `NEEDS_CLARIFI
 - G5 Implementation
 - G6 QA
 - G7 Independent security audit
-- G8 Code review
-- G9 Release readiness
+- G8 Visual regression
+- G9 Code review
+- G10 Release readiness
 
 A blocked gate stops downstream work unless the lead documents an explicit, justified exception.
 

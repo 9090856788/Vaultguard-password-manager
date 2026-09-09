@@ -6,6 +6,12 @@
 
 **Branch:** `tech-stack-migration`
 
+> G4 authority: database and migration details in this roadmap are subordinate
+> to [database-schema.md](../database/database-schema.md),
+> [migration-strategy.md](../database/migration-strategy.md), and
+> [g4-database-review.md](g4-database-review.md). G4 is planning only; G5 is
+> implementation.
+
 ---
 
 ## Migration Strategy Overview
