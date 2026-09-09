@@ -1,0 +1,28 @@
+version: 1
+project: VaultGuard Password Manager
+quality_target:
+  target: 95%
+  note: "A quality target, not a guarantee. Evidence comes from gates, tests, independent review, and reproducible checks."
+integrations:
+  github:
+    enabled: true
+    role: source_control_and_review
+  jira:
+    enabled: false
+    role: issue_and_work_tracking
+  figma:
+    enabled: false
+    role: design_source_and_review
+  database:
+    enabled: false
+    role: schema_query_and_migrations
+  monitoring:
+    enabled: false
+    role: runtime_observability
+  cloud:
+    enabled: false
+    role: deployment_and_infrastructure
+policy:
+  tool_availability_wins: true
+  never_fabricate_integrations: true
+  fallback_to_repository_artifacts: true
