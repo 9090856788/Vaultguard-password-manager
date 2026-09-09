@@ -99,7 +99,7 @@ Purpose: a user-owned encrypted vault and its key metadata.
   legacyId?: string,
   ownerUserId: ObjectId,          // required, immutable
   name: string,
-  wrappedVekEnvelope: {
+  wrappedVekEnvelope?: {
     version: number,
     keyId: string,
     algorithm: "AES-256-GCM",
@@ -108,23 +108,31 @@ Purpose: a user-owned encrypted vault and its key metadata.
     tag: string,
     aad: string
   },
-  kdf: {
+  kdf?: {
     algorithm: "Argon2id",
     version: number,
     salt: string,                 // random per-vault salt
     memoryKiB: number,
     timeCost: number,
     parallelism: number,
-    outputBytes: 32
+    outputBytes: 32,
+    purpose: "vault-kek"
   },
-  currentKeyId: string,
-  encryptionFormatVersion: number,
-  migrationState: "legacy-quarantined" | "awaiting-owner" | "encrypting" | "verified" | "blocked",
+  currentKeyId?: string,
+  encryptionFormatVersion?: number,
+  migrationState: "legacy-quarantined" | "awaiting-owner" | "encrypting" | "preparing" | "verified" | "blocked",
   createdAt: Date,
   updatedAt: Date,
   deletedAt?: Date
 }
 ```
+
+During G5.4.1 vault preparation, `migrationState` is `preparing` and the
+wrapped VEK envelope, KDF metadata, current key ID, and encryption format
+version are intentionally absent until the owner completes client-side key
+initialization. Those cryptographic fields are required for every state after
+preparation. The `purpose` value is fixed to `vault-kek` and is not
+caller-configurable.
 
 The server stores the wrapped VEK envelope and KDF metadata, never the
 plaintext KEK, VEK, or Vault Master Password. The owner relationship is

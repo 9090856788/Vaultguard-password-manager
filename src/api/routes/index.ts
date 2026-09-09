@@ -5,6 +5,7 @@ import categoryRoutes from './categoryRoutes';
 import activityRoutes from './activityRoutes';
 import auditRoutes from './auditRoutes';
 import vaultRoutes from './vaultRoutes';
+import vaultLifecycleRoutes from './vaultLifecycleRoutes';
 import { authController } from '../controllers/authController';
 import { authenticateToken } from '../middlewares/authMiddleware';
 import { requestId } from '../middleware/requestId';
@@ -50,5 +51,6 @@ apiRouter.use('/security', auditRoutes);
 
 // Vault Backup Import/Export Routes (/api/v1/vault)
 apiRouter.use('/vault', vaultRoutes);
+apiRouter.use('/vaults', vaultLifecycleRoutes);
 
 export default apiRouter;

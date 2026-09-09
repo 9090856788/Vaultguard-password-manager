@@ -36,7 +36,7 @@ test('vault and vault item reject plaintext secret fields', async () => {
     ownerUserId: userId,
     name: 'Personal',
     wrappedVekEnvelope: envelope,
-    kdf: { algorithm: 'Argon2id', version: 1, salt: 'salt', memoryKiB: 65536, timeCost: 3, parallelism: 1, outputBytes: 32 },
+    kdf: { algorithm: 'Argon2id', version: 1, salt: 'salt', memoryKiB: 65536, timeCost: 3, parallelism: 1, outputBytes: 32, purpose: 'vault-kek' },
     currentKeyId: 'key-1',
     encryptionFormatVersion: 1,
     migrationState: 'awaiting-owner',
@@ -60,6 +60,14 @@ test('vault and vault item reject plaintext secret fields', async () => {
   await assert.rejects(tooManyTags.validate());
 });
 
+test('preparing vaults may omit cryptographic material, but verified vaults may not', async () => {
+  const preparing = new VaultModel({ ownerUserId: userId, name: 'Preparing', migrationState: 'preparing' });
+  await assert.doesNotReject(preparing.validate());
+
+  const verified = new VaultModel({ ownerUserId: userId, name: 'Missing crypto', migrationState: 'verified' });
+  await assert.rejects(verified.validate());
+});
+
 test('KDF metadata accepts only the approved versioned baseline', async () => {
   const invalidValues = [
     { memoryKiB: 1, timeCost: 3, parallelism: 1 },
@@ -72,7 +80,7 @@ test('KDF metadata accepts only the approved versioned baseline', async () => {
       ownerUserId: userId,
       name: 'Invalid KDF',
       wrappedVekEnvelope: envelope,
-      kdf: { algorithm: 'Argon2id', version: 1, salt: 'salt', ...kdf, outputBytes: 32 },
+      kdf: { algorithm: 'Argon2id', version: 1, salt: 'salt', ...kdf, outputBytes: 32, purpose: 'vault-kek' },
       currentKeyId: 'key-1',
       encryptionFormatVersion: 1,
       migrationState: 'awaiting-owner',
@@ -127,7 +135,7 @@ test('session state enum and vault migration state are constrained', async () =>
     ownerUserId: userId,
     name: 'Personal',
     wrappedVekEnvelope: envelope,
-    kdf: { algorithm: 'Argon2id', version: 1, salt: 'salt', memoryKiB: 65536, timeCost: 3, parallelism: 1, outputBytes: 32 },
+    kdf: { algorithm: 'Argon2id', version: 1, salt: 'salt', memoryKiB: 65536, timeCost: 3, parallelism: 1, outputBytes: 32, purpose: 'vault-kek' },
     currentKeyId: 'key-1',
     encryptionFormatVersion: 1,
     migrationState: 'plaintext-ready',
