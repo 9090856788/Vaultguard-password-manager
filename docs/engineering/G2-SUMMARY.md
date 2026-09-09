@@ -5,6 +5,9 @@
 **Status:** 🟢 **APPROVED WITH CRITICAL CONDITIONS**  
 **Documentation Completeness:** 95% (Phase 7 API specs deferred)
 
+> Historical G2 snapshot. Current security architecture and gate definitions
+> are authoritative in `docs/security/g3-authoritative-baseline.md`.
+
 ---
 
 ## Executive Summary
@@ -487,7 +490,7 @@ Total Timeline: 12-18 weeks from Phase 0 start
 | Phase 5-6 Complete     | Nov 5                  | All tests passing (>85% coverage)       |
 | Phase 7 Complete       | Nov 10                 | API documentation complete              |
 | Phase 8 Complete       | Nov 15                 | AI provider skeleton ready              |
-| G4 Release Gate        | Nov 20                 | Production readiness verified           |
+| G10 Release Gate       | Pending               | Production readiness verified           |
 | **PRODUCTION RELEASE** | **Late November 2026** | Full tech stack migration complete      |
 
 ---
@@ -598,7 +601,7 @@ Total Timeline: 12-18 weeks from Phase 0 start
 ```
 G2 Approved ✅
     ↓
-G3 Security Review (Sep 9-10) ⏳
+G3 Security Review ✅ APPROVED WITH CONDITIONS
     ├─ Security architect reviews auth
     ├─ Crypto architect reviews encryption
     ├─ Landing page approved
@@ -616,7 +619,7 @@ Phase 1-8 Implementation (Sep-Nov) ⏰
     ├─ Testing expansion
     └─ Release preparation
     ↓
-G4 Release Gate (Nov 20) ✅
+G10 Release Gate (Pending) ⏳
     └─ PRODUCTION DEPLOYMENT
 ```
 

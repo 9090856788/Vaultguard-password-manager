@@ -133,7 +133,7 @@ import { Schema, model } from "mongoose";
 
 const userSchema = new Schema({
   email: { type: String, unique: true, index: true },
-  masterPasswordHash: String,
+  accountPasswordVerifier: String,
   fullName: String,
   createdAt: { type: Date, default: Date.now },
   updatedAt: Date,

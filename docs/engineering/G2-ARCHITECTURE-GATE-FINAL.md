@@ -6,6 +6,9 @@
 **Branch:** `tech-stack-migration`  
 **Status:** 🟢 **APPROVED WITH CRITICAL CONDITIONS**
 
+> Historical G2 snapshot. Current security architecture and gate definitions
+> are authoritative in `docs/security/g3-authoritative-baseline.md`.
+
 ---
 
 ## EXECUTIVE DECISION
@@ -82,14 +85,14 @@ Implementation Starts (Phase 0)
 ├─ Phase 8: AI provider skeleton
 │
 ↓
-G4 - Implementation Complete
+G5 - Implementation
 ├─ All tests pass
 ├─ Visual parity verified
 ├─ Security audit passed
 ├─ Performance benchmarks met
 │
 ↓
-G5 - Production Release
+G10 - Release
 ```
 
 ---

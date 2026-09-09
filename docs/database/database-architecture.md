@@ -1,8 +1,11 @@
 # Database Architecture (Target)
 
 **Date:** September 2026  
-**Gate:** G2 - Architecture Review  
+**Gate:** G4 - Database Architecture + JSON-to-Mongo Migration Planning
 **Focus:** MongoDB + Mongoose Collections, Schema Design, Migration
+
+The security boundaries in `docs/security/g3-authoritative-baseline.md` are
+mandatory constraints for this document.
 
 ---
 
@@ -68,7 +71,7 @@ process.on("SIGTERM", async () => {
 db.users = {
   _id: ObjectId,                              // MongoDB ID
   email: String,                              // Unique, lowercase
-  masterPasswordHash: String,                 // bcrypt hash (60 chars)
+  accountPasswordVerifier: String,             // account authentication only; select: false
   fullName: String,
 
   // Account status
@@ -116,9 +119,10 @@ db.vaults = {
   description: String,
 
   // Encryption metadata
-  encryptionKey: String,                      // Phase 2: Encrypted with user's pub key
-  encryptionAlgorithm: String,                // 'aes-256-gcm'
-  keyDerivationAlgorithm: String,             // 'argon2id'
+  wrappedVekEnvelope: Object,                 // authenticated KEK-wrapped VEK
+  kdfMetadata: Object,                         // version, random salt, Argon2id parameters
+  currentKeyId: String,
+  encryptionFormatVersion: Number,
 
   // Vault status
   isDefault: Boolean,
@@ -155,13 +159,16 @@ db.vaultitems = {
   createdBy: ObjectId,                        // FK to users (who created)
 
   // Basic fields
-  host: String,                               // e.g., "github.com", "AWS"
-  username: String,
-  password: String,                           // Plain (Phase 1), encrypted (Phase 2+)
+  host: String,                               // searchable metadata only when justified
+  username: String,                            // searchable metadata only when justified
+  encryptedSecrets: Object,                    // password, notes, TOTP, recovery, custom secrets
+  keyId: String,
+  envelopeVersion: Number,
+  revision: Number,
 
   // Optional metadata
   url: String,                                // e.g., "https://github.com/login"
-  notes: String,                              // Up to 1000 chars
+  // Secure notes are inside encryptedSecrets; no plaintext notes field.
   categoryId: ObjectId,                       // FK to categories (optional)
   tags: [String],                             // Up to 10 tags
 
@@ -179,7 +186,7 @@ db.vaultitems = {
 
 // Indexes
 db.vaultitems.createIndex({ vaultId: 1, deletedAt: 1 })
-db.vaultitems.createIndex({ host: 1, vaultId: 1 }, { unique: true, sparse: true })
+// No unique { host, vaultId } index: multiple credentials per host are valid.
 db.vaultitems.createIndex({ strength: 1 })
 db.vaultitems.createIndex({ tags: 1 })
 db.vaultitems.createIndex({ createdBy: 1 })
@@ -189,7 +196,7 @@ db.vaultitems.createIndex({ createdAt: -1 })
 FK: vaultId → vaults._id
 FK: createdBy → users._id
 FK: categoryId → categories._id (optional)
-unique: (host, vaultId) per user
+No unique host/vault constraint; multiple credentials per host are supported.
 immutable: vaultId, createdBy, createdAt
 ```
 
@@ -410,7 +417,7 @@ import * as bcrypt from "bcryptjs";
 
 export interface IUser extends Document {
   email: string;
-  masterPasswordHash: string;
+  accountPasswordVerifier: string;
   fullName: string;
   emailVerified: boolean;
   twoFactorEnabled: boolean;
@@ -427,7 +434,7 @@ export interface IUser extends Document {
   lastPasswordChange?: Date;
   deletedAt?: Date;
 
-  comparePassword(password: string): Promise<boolean>;
+  compareAccountPassword(password: string): Promise<boolean>;
 }
 
 const userSchema = new Schema<IUser>(
@@ -444,7 +451,7 @@ const userSchema = new Schema<IUser>(
       },
     },
 
-    masterPasswordHash: {
+    accountPasswordVerifier: {
       type: String,
       required: true,
       select: false, // Don't load by default
@@ -512,20 +519,18 @@ userSchema.index({ deletedAt: 1 });
 userSchema.index({ createdAt: -1 });
 
 // Methods
-userSchema.methods.comparePassword = async function (
+userSchema.methods.compareAccountPassword = async function (
   password: string,
 ): Promise<boolean> {
-  return bcrypt.compare(password, this.masterPasswordHash);
+  return verifyAccountPassword(password, this.accountPasswordVerifier);
 };
 
 // Pre-save hook
 userSchema.pre("save", async function (next) {
   this.updatedAt = new Date();
 
-  if (this.isModified("masterPasswordHash")) {
-    const salt = await bcrypt.genSalt(10);
-    this.masterPasswordHash = await bcrypt.hash(this.masterPasswordHash, salt);
-  }
+  // Account verifiers are created/upgraded exactly once in the account
+  // authentication service. The model must not double-hash them.
 
   next();
 });
@@ -535,7 +540,7 @@ userSchema.post(/^find/, function (docs) {
   if (!Array.isArray(docs)) docs = [docs];
   docs.forEach((doc) => {
     if (doc) {
-      delete doc.masterPasswordHash;
+      delete doc.accountPasswordVerifier;
     }
   });
 });
@@ -651,10 +656,11 @@ db.vaultitems.aggregate([
 **Phase 5: Rollback Plan**
 
 - If failures: stop insertion
-- Delete from MongoDB
-- Revert to JSON
-- Fix issues
-- Retry
+- Stop writes for the affected migration ID
+- Preserve the failed target for investigation
+- Restore the previous application target/version
+- Verify recovery from the immutable source backup
+- Resume only after documented review
 
 ### 6.2 Transformation Logic
 
@@ -696,7 +702,7 @@ export async function migrateJsonToMongoDB() {
     for (const user of usersData) {
       const newUser = new UserModel({
         email: user.email,
-        masterPasswordHash: user.password, // Already bcrypted in demo
+        accountPasswordVerifier: user.passwordHash, // Preserve verifier format and metadata; do not double-hash
         fullName: user.name || user.email,
         createdAt: user.createdAt || new Date(),
         updatedAt: user.updatedAt || new Date(),
@@ -749,7 +755,9 @@ export async function migrateJsonToMongoDB() {
         vaultId,
         host: password.host || password.site || "Unknown",
         username: password.username || "",
-        password: password.password, // Plaintext for now
+        // Legacy plaintext must enter quarantine, not final VaultItem fields.
+        migrationState: "quarantined-plaintext",
+        legacySecretReference: createQuarantineReference(password.id),
         notes: password.notes,
         categoryId: categoryMap.get(password.categoryId) || undefined,
         strength: password.strength || "good",
@@ -797,15 +805,13 @@ export async function migrateJsonToMongoDB() {
 ### 6.3 Rollback Procedure
 
 ```typescript
-export async function rollbackMigration() {
-  // Delete all documents
-  await UserModel.deleteMany({});
-  await VaultModel.deleteMany({});
-  await VaultItemModel.deleteMany({});
-  await CategoryModel.deleteMany({});
-  await ActivityModel.deleteMany({});
-
-  console.log("✓ Rollback complete - all collections cleared");
+export async function rollbackMigration(migrationId: string) {
+  // Stop writes, preserve the failed target for investigation, and restore
+  // the previous application target by migration ID/version. Never clear all
+  // collections or delete unrelated tenant data.
+  await markMigrationRolledBack(migrationId);
+  await restorePreviousTargetVersion(migrationId);
+  await verifyRollback(migrationId);
 }
 ```
 

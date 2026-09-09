@@ -785,7 +785,7 @@ import * as bcrypt from "bcryptjs";
 
 export interface IUser extends Document {
   email: string;
-  masterPasswordHash: string;
+  accountPasswordVerifier: string;
   fullName: string;
   createdAt: Date;
   updatedAt: Date;
@@ -811,10 +811,10 @@ const userSchema = new Schema<IUser>({
     match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
   },
 
-  masterPasswordHash: {
+  accountPasswordVerifier: {
     type: String,
     required: true,
-    minlength: 60, // bcrypt hash length
+    select: false,
   },
 
   fullName: {
@@ -876,13 +876,13 @@ userSchema.pre("save", async function (next) {
 // Post-save hook (never return password hash)
 userSchema.post("findOne", function (doc) {
   if (doc) {
-    doc.masterPasswordHash = undefined;
+    doc.accountPasswordVerifier = undefined;
   }
 });
 
 // Instance method
-userSchema.methods.comparePassword = async function (password: string) {
-  return bcrypt.compare(password, this.masterPasswordHash);
+userSchema.methods.compareAccountPassword = async function (password: string) {
+  return verifyAccountPassword(password, this.accountPasswordVerifier);
 };
 
 export const UserModel = mongoose.model<IUser>("User", userSchema);
@@ -896,7 +896,10 @@ export interface IVaultItem extends Document {
   vaultId: ObjectId;
   host: string;
   username: string;
-  password: string; // encrypted (Phase 2+)
+  encryptedSecrets: object; // versioned authenticated envelopes only
+  keyId: string;
+  envelopeVersion: number;
+  revision: number;
   notes?: string;
   url?: string;
   categoryId?: ObjectId;
@@ -926,11 +929,14 @@ const vaultItemSchema = new Schema<IVaultItem>({
     required: true,
   },
 
-  password: {
-    type: String,
+  encryptedSecrets: {
+    type: Schema.Types.Mixed,
     required: true,
-    // Note: Will be encrypted before saving (Phase 2+)
   },
+
+  keyId: { type: String, required: true },
+  envelopeVersion: { type: Number, required: true },
+  revision: { type: Number, required: true },
 
   notes: String,
   url: String,
@@ -970,7 +976,7 @@ const vaultItemSchema = new Schema<IVaultItem>({
 
 // Indexes (critical for queries)
 vaultItemSchema.index({ vaultId: 1, deletedAt: 1 });
-vaultItemSchema.index({ host: 1, vaultId: 1 });
+// Deliberately no unique host/vault index: multiple credentials per host are valid.
 vaultItemSchema.index({ createdBy: 1 });
 vaultItemSchema.index({ strength: 1 });
 
@@ -979,7 +985,7 @@ vaultItemSchema.post("find", function (docs) {
   if (Array.isArray(docs)) {
     docs.forEach((doc) => {
       if (doc) {
-        doc.password = undefined;
+        doc.encryptedSecrets = undefined;
       }
     });
   }

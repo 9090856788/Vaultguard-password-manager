@@ -1,8 +1,11 @@
 # Migration Risk Register & Strategy
 
 **Date:** September 2026  
-**Gate:** G2 - Architecture Review  
+**Gate:** G4 - Database Architecture + JSON-to-Mongo Migration Planning
 **Focus:** Risk identification, mitigation, and implementation strategy
+
+This document is a G4 planning artifact. It must not be read as evidence that
+the migration or encryption implementation already exists.
 
 ---
 
@@ -29,9 +32,11 @@
 
 **Rollback:**
 
-- Delete from MongoDB
-- Restore from backup
-- Resume investigation
+- Stop writes for the affected migration ID
+- Preserve the failed target for investigation
+- Restore the previous application target/version
+- Verify recovery from the immutable source backup
+- Resume only after documented review
 
 **Testing:**
 

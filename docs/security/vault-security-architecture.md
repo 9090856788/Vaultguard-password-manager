@@ -1,8 +1,8 @@
 # Vault Encryption Architecture (Target)
 
 **Date:** September 2026  
-**Gate:** G2 - Architecture Review  
-**Status:** CRITICAL - Addresses P0 False Encryption Claims  
+**Gate:** G3 - Security/Crypto Architecture
+**Status:** APPROVED WITH CONDITIONS; target architecture only
 **Focus:** Password Encryption, Key Management, Client vs. Server Responsibilities
 
 ---
@@ -28,20 +28,12 @@
 - False claims could expose company to legal liability
 - Must be fixed IMMEDIATELY before production
 
-**Recommended Solution:**
+**G3 Decision:**
 
-**PHASE 1 (Immediate):**
-
-1. ✅ Update landing page to reflect actual security model
-2. ✅ Document planned encryption roadmap on landing page
-3. ✅ Mark encryption features as "coming soon"
-
-**PHASE 2+ (Future, not Phase 1):**
-
-1. Implement actual client-side encryption (AES-256-GCM)
-2. Implement key derivation (Argon2id)
-3. Implement zero-knowledge architecture
-4. Update landing page with implemented features
+The current implementation remains unsupported for zero-knowledge, end-to-end
+encryption, encrypted-at-rest, and encrypted-export claims. The approved
+replacement is a G3 target architecture implemented only through G5 and
+verified through G6/G7. The landing page must remain honest until then.
 
 ---
 
@@ -78,11 +70,11 @@ MONGODB
 | ------------------- | -------------------------------- | ---------------------------------------- |
 | Man-in-the-middle   | ❌ High risk if no HTTPS         | ✅ Enforce HTTPS/TLS                     |
 | Server compromise   | ❌ All passwords exposed         | ⚠️ Announced in Phase 2 roadmap          |
-| XSS on client       | ✅ Token in localStorage (risky) | ✅ Phase 3: Move to HttpOnly cookies     |
+| XSS on client       | ✅ Token in localStorage (risky) | ✅ G3 target: Secure/HttpOnly/SameSite cookies |
 | Brute force on user | ⚠️ No rate limiting              | ✅ Phase 1: Add rate limiting + lockout  |
 | Weak password       | ✅ Strength meter exists         | ✅ Keep strength meter                   |
 | Password reuse      | ✅ Can be detected               | ✅ Check against breached password lists |
-| Account takeover    | ⚠️ No 2FA                        | ✅ Phase 3+: Add 2FA support             |
+| Account takeover    | ⚠️ No 2FA                        | ✅ G3 target: implement and verify 2FA lifecycle at G5/G6 |
 
 ### 2.3 Landing Page Update (Immediate/Phase 1)
 
@@ -118,8 +110,8 @@ COMING SOON (Phase 2-3):
 → Password sharing and delegation
 → End-to-end encrypted imports/exports
 
-Our security is transparent: passwords are stored encrypted on our servers.
-The roadmap above shows the path toward true zero-knowledge encryption."
+Our security is transparent: the current prototype does not provide encrypted
+vault storage. The roadmap above describes planned capabilities only."
 ```
 
 ### 2.4 Client-Side Guidance (Phase 1)
@@ -145,14 +137,15 @@ ARCHITECTURE (Not implemented Phase 1):
 
 USER
   │
-  ├─ Enter master password
+  ├─ Enter Vault Master Password
   │
   ▼
 BROWSER (Client-Side Crypto)
   │
-  ├─ Master password (stays local)
-  │   └─ Argon2id KDF
-  │       └─ Vault encryption key (256-bit, derived)
+  ├─ Vault Master Password (stays local)
+  │   └─ Argon2id with random per-vault salt
+  │       └─ 32-byte KEK
+  │           └─ Authenticated unwrap of random 32-byte VEK
   │
   ├─ Plaintext password (from user input)
   │   └─ AES-256-GCM encryption
@@ -164,7 +157,7 @@ BROWSER (Client-Side Crypto)
 SERVER
   │
   ├─ Store ciphertext (cannot decrypt, no key)
-  ├─ Store encrypted vault key (encrypted with user's RSA public key)
+  ├─ Store only the authenticated wrapped VEK envelope
   ├─ On logout: forget vault key immediately
   │
   ▼
@@ -188,16 +181,16 @@ export async function deriveVaultKey(masterPassword: string): Promise<Buffer> {
     type: argon2.argon2id,
     memoryCost: 65536, // 64 MB memory
     timeCost: 3, // 3 iterations
-    parallelism: 4,
-    salt: Buffer.from(userId), // User ID as salt (deterministic)
+    parallelism: 1,
+    salt: randomPerVaultSalt,
+    hashLength: 32,
   });
 
   return vaultKey; // 32 bytes for AES-256
 }
 
-// Result: Same master password + same user = same vault key
-// Different user = different vault key (different salt)
-// Changes to master password change the vault key
+// The salt is random, stored with versioned KDF metadata, and is never
+// derived from a user ID, email address, or other predictable identifier.
 ```
 
 ### 3.3 Encryption (AES-256-GCM) - Phase 2+
@@ -346,18 +339,19 @@ EXPORT:
 - ✅ Audit logging
 - ✅ MongoDB database (no more plaintext files)
 
-**NOT included:** Client-side encryption, zero-knowledge, AES-256-GCM, Argon2id
+**UNSUPPORTED in current implementation:** Client-side encryption, zero-knowledge,
+AES-256-GCM vault storage, and Argon2id vault derivation.
 
 ### 4.2 Phase 2 (Infrastructure + Encryption)
 
 **Deliverables:**
 
-- ✅ Mongoose schema with `encryptedPassword` field
-- ✅ Client-side AES-256-GCM encryption library
-- ✅ Argon2id key derivation
-- ✅ Vault key management in browser (Redux memory)
-- ✅ Re-encryption on password change
-- ✅ Export/import with encryption
+- PLANNED: Mongoose schema with encrypted secret envelopes
+- PLANNED: Client-side AES-256-GCM encryption library
+- PLANNED: Argon2id KEK derivation
+- PLANNED: Vault key management in transient browser memory
+- PLANNED: Re-wrapping on Vault Master Password change
+- PLANNED: Encrypted export/import
 - ✅ Client-side search (download and decrypt)
 - ✅ Updated landing page
 
@@ -367,13 +361,13 @@ EXPORT:
 
 **Deliverables:**
 
-- ✅ HttpOnly cookies instead of localStorage
-- ✅ 2FA support
-- ✅ Password sharing (with zero-knowledge)
-- ✅ Emergency contacts (with time-locked decryption)
-- ✅ PBKDF2 as fallback to Argon2id
-- ✅ Visual zero-knowledge indicator
-- ✅ Breach detection with encrypted comparison
+- PLANNED: HttpOnly cookies instead of localStorage
+- PLANNED: 2FA support
+- PLANNED: Password sharing, subject to a separate security design
+- PLANNED: Emergency access, subject to a separate security design
+- PLANNED: Approved fallback KDF only if separately reviewed
+- PLANNED: Security-state indicator after implementation and audit
+- PLANNED: Privacy-preserving breach detection
 
 ---
 
@@ -572,11 +566,11 @@ test("POST /passwords: stores encrypted data", async () => {
 - **Argon2id:** Password hashing competition winner (RFC 9106)
 - **HTTPS/TLS 1.3:** Industry standard encryption
 - **bcrypt:** OWASP-recommended password hashing
-- **Zero-knowledge:** Privacy-preserving by design
+- **Zero-knowledge:** PLANNED; unsupported by the current implementation
 
 ### 8.2 Regulatory Compliance
 
-- **GDPR:** User data encrypted at rest
+- **GDPR:** No encryption-at-rest claim is made for the current prototype
 - **SOC 2 Type II:** Security controls documented
 - **HIPAA:** If handling healthcare data (future)
 - **PCI-DSS:** If handling payment cards (future)

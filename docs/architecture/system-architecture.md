@@ -451,7 +451,7 @@ export class MongoPasswordRepository implements IPasswordRepository {
 ```typescript
 const userSchema = new Schema<IUser>({
   email: { type: String, required: true, unique: true, lowercase: true },
-  masterPasswordHash: { type: String, required: true }, // bcrypt
+  accountPasswordVerifier: { type: String, required: true }, // account authentication only
   fullName: { type: String, required: true },
   createdAt: { type: Date, default: Date.now, immutable: true },
   updatedAt: { type: Date, default: Date.now },
@@ -496,7 +496,7 @@ userSchema.index({ deletedAt: 1 });
 17. AuthService → AuthController: return { userId, token, refreshToken }
 18. AuthController → Response: 201 { userId, token, refreshToken, user }
 19. Browser → Redux: Dispatch setAuth(user, token)
-20. Browser → localStorage: Store token (HttpOnly cookie in Phase 3)
+20. Browser → Secure, HttpOnly, SameSite-configured session cookies
 21. Browser → User: Navigate to /dashboard
 ```
 
@@ -526,8 +526,8 @@ userSchema.index({ deletedAt: 1 });
 ```
 CLIENT SIDE (Browser):
 1. User enters vault (after login)
-2. TanStack Query: GET /api/v1/vaults/xyz/key (encrypted with pub key)
-3. EncryptionService: Decrypt using private key (WebCrypto API)
+2. TanStack Query: GET /api/v1/vaults/xyz/key (authenticated wrapped VEK envelope)
+3. EncryptionService: Derive KEK locally and unwrap the VEK
 4. Redux: Store decrypted vault key in memory (NOT localStorage)
 
 VIEWING PASSWORD:
@@ -564,11 +564,11 @@ BcryptService → Return boolean
 ### 5.2 Token Management Boundary
 
 ```
-CURRENT (Phase 1):
+CURRENT STATE (prototype):
 - Access token in localStorage (XSS risk)
 - Refresh token in localStorage (XSS risk)
 
-PHASE 3+ (RECOMMENDED):
+TARGET STATE (G3 approved; implementation at G5):
 - Access token in HttpOnly cookie (Secure, SameSite=Strict)
 - Refresh token in separate HttpOnly cookie
 - CSRF token in headers or custom cookie
@@ -585,15 +585,15 @@ PHASE 1 (Skeleton):
 - Encryption layer abstracted but not implemented
 - Landing page updated to reflect reality
 
-PHASE 2+ (Full Implementation):
+TARGET STATE (G3 approved; implementation at G5):
 CLIENT SIDE:
-- Master password → PBKDF2/Argon2id → Vault key
-- Vault key → WebCrypto API → Decrypt vault key from server
+- Vault Master Password → versioned Argon2id → KEK
+- KEK → authenticated unwrap → random VEK
 - Plaintext passwords in Redux memory only
 - On logout: Clear everything
 
 SERVER SIDE:
-- Vault key: Encrypted with server RSA public key
+- VEK: Authenticated envelope wrapped under the browser-derived KEK
 - Passwords: Encrypted with vault key (AES-256-GCM)
 - Server cannot decrypt passwords
 - Server returns encrypted data only

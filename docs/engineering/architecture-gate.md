@@ -2,9 +2,11 @@
 
 **Date:** September 2026  
 **Gate:** G2 - Architecture Review & Approval  
-**Status:** ⏳ PENDING DECISION  
+**Status:** Historical G2 record; G3 APPROVED WITH CONDITIONS
 **Decision Maker:** Engineering Lead + Architecture Team  
-**Next Gate:** G3 - Security/Crypto Review
+**Next Gate:** G4 - Database Architecture + JSON-to-Mongo Migration Planning
+
+> This document records the historical G2 decision. Current security architecture and gate definitions are authoritative in [g3-authoritative-baseline.md](../security/g3-authoritative-baseline.md).
 
 ---
 
@@ -500,21 +502,19 @@ Router → Controller → Service → Repository → Model → MongoDB
 
 ---
 
-### Gate G4+: Implementation & Verification
+### Gate G4: Database Architecture + JSON-to-Mongo Migration Planning
 
-**Implementation:** After G3 approval
+**Planning:** After G3 approval; implementation begins at G5
 
 **Phases:**
 
-- Phase 0: Foundation (env, validation, logging)
-- Phase 1: Backend MVC + Database
-- Phase 2: MongoDB migration
-- Phase 3: Auth hardening
-- Phase 4-6: Frontend architecture
-- Phase 7: Testing infrastructure
-- Phase 8: AI skeleton
-- Phase 9: Security audit
-- Phase 10: Production ready
+- G4: schemas, ownership, indexes, migration, backup, rollback
+- G5: implementation
+- G6: QA
+- G7: independent security audit
+- G8: visual regression
+- G9: code review
+- G10: release readiness
 
 **Approval Process:** Each phase has acceptance criteria and verification
 
@@ -697,14 +697,13 @@ VaultGuard's target architecture is **sound, practical, and achievable**. The de
 **Critical Path Forward:**
 
 1. ✅ G2 Architecture Gate: **APPROVED** (this document)
-2. ⏳ G3 Security/Crypto Gate: **Scheduled** (next 1 week)
-3. ⏳ Implementation: **Begins after G3** (Phase 0-10)
+2. ✅ G3 Security/Crypto Gate: **APPROVED WITH CONDITIONS**
+3. ⏳ G4 Database Architecture + JSON-to-Mongo Migration Planning
 
 **Key Blocking Issues:**
 
-- ❌ Landing page MUST be updated before launch (honesty about Phase 1 security)
-- ❌ Security architect MUST approve authentication + encryption
-- ❌ Database engineer MUST approve migration plan
+- ❌ Source implementation still requires G5 security architecture implementation
+- ❌ Database engineer must complete G4 migration planning and approval
 
 **Timeline Estimate:**
 
@@ -713,7 +712,7 @@ VaultGuard's target architecture is **sound, practical, and achievable**. The de
 - Full completion: 20-32 weeks (~5-8 months)
 
 **Recommendation:**
-**PROCEED to Phase 1** with contingency for Phase 3 security improvements (HttpOnly cookies, account lockout refinement).
+**PROCEED to G4 planning**. G5 implementation remains blocked until the G3 conditions are implemented and verified.
 
 ---
 
@@ -751,8 +750,8 @@ VaultGuard's target architecture is **sound, practical, and achievable**. The de
 
 **Decision Date:** 2026-09-09  
 **Approved By:** Engineering Lead  
-**Next Review:** G3 Security/Crypto Gate  
-**Blocking Issues:** Landing page update, G3 approval
+**Next Review:** G4 Database Architecture + JSON-to-Mongo Migration Planning
+**Blocking Issues:** G4 migration plan approval and G3 implementation prerequisites
 
 ---
 

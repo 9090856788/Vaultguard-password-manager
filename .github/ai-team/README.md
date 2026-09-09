@@ -31,7 +31,7 @@ Each gate should be explicitly reported as `READY`, `BLOCKED`, or `NEEDS_CLARIFI
 - G1 Requirements
 - G2 Architecture
 - G3 Security/Crypto
-- G4 Implementation plan
+- G4 Database architecture and JSON-to-Mongo migration planning
 - G5 Implementation
 - G6 QA
 - G7 Independent security audit

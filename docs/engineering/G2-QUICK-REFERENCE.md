@@ -4,6 +4,9 @@
 **Status:** 🟢 APPROVED WITH CONDITIONS  
 **Branch:** `tech-stack-migration`
 
+> Historical G2 snapshot. Current security architecture and gate definitions
+> are authoritative in `docs/security/g3-authoritative-baseline.md`.
+
 ---
 
 ## One-Page Summary
@@ -130,9 +133,14 @@ Total: 12-18 weeks from Phase 0 start
 ```
 G1 - Intake                          ✅ COMPLETE
 G2 - Architecture Review & Approval  ✅ APPROVED WITH CONDITIONS
-G3 - Security/Crypto Review         ⏳ PENDING (Sep 9-10)
-G4 - Implementation Complete        ⏳ PENDING (Nov 20)
-G5 - Production Release             ⏳ PENDING (Late Nov)
+G3 - Security/Crypto Review         ✅ APPROVED WITH CONDITIONS
+G4 - Database + Migration Planning  ⏳ PENDING
+G5 - Implementation                 ⏳ PENDING
+G6 - QA                             ⏳ PENDING
+G7 - Independent Security Audit     ⏳ PENDING
+G8 - Visual Regression              ⏳ PENDING
+G9 - Code Review                    ⏳ PENDING
+G10 - Release                       ⏳ PENDING
 ```
 
 ---

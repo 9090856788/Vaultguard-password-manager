@@ -1,10 +1,14 @@
 # ADR-002: Client-Side vs. Server-Side Encryption Strategy
 
 **Date:** September 2026  
-**Status:** APPROVED (G2 Architecture Gate) - Requires G3 Crypto Review  
+**Status:** Superseded by G3 authoritative baseline
 **Impact:** Password security model for Phases 1, 2, and 3+
 
 ---
+
+> Historical G2 decision record. The target design is defined by
+> `docs/security/g3-authoritative-baseline.md`; roadmap examples below do not
+> represent current implementation or an alternative target architecture.
 
 ## Context
 
@@ -70,7 +74,8 @@ Current landing page claims:
 
 - AES-256-GCM requires careful implementation
 - IV handling must be correct (randomness, non-repetition)
-- Key derivation must be deterministic but strong (Argon2id tuning)
+- Key derivation uses a random per-vault salt, versioned Argon2id parameters,
+  and explicit purpose/context separation.
 - Re-encryption on password change is complex
 - Browser crypto API differences (Safari, Chrome, Firefox)
 - Testing must be comprehensive (no backdoors, no key leaks)
@@ -185,9 +190,9 @@ import { subtle } from "crypto";
 // 1. Derive vault key from master password
 async function deriveVaultKey(
   masterPassword: string,
-  userId: string,
+  vaultId: string,
 ): Promise<CryptoKey> {
-  const salt = new TextEncoder().encode(userId); // Deterministic salt
+  const salt = randomPerVaultSalt; // Generated randomly and stored with KDF metadata
 
   const key = await argon2.hash({
     pass: masterPassword,
