@@ -1,0 +1,18 @@
+[
+  {
+    "id": "act_1788359706907_27bo",
+    "userId": "usr_demo_alex",
+    "action": "Master Vault Unlocked",
+    "details": "Successfully unlocked zero-knowledge vault session.",
+    "ipAddress": "127.0.0.1",
+    "timestamp": "2026-09-02T14:35:06.907Z"
+  },
+  {
+    "id": "act_seed_01",
+    "userId": "usr_demo_alex",
+    "action": "Master Vault Unlocked",
+    "details": "Logged into ShieldVault Pro via Argon2id authenticated session.",
+    "ipAddress": "127.0.0.1",
+    "timestamp": "2026-09-02T14:30:00.156Z"
+  }
+]

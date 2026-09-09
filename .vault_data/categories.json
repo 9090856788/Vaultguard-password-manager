@@ -1,0 +1,58 @@
+[
+  {
+    "id": "cat_work",
+    "userId": "usr_demo_alex",
+    "name": "Work",
+    "iconName": "Briefcase",
+    "color": "indigo",
+    "isCustom": false
+  },
+  {
+    "id": "cat_personal",
+    "userId": "usr_demo_alex",
+    "name": "Personal",
+    "iconName": "User",
+    "color": "emerald",
+    "isCustom": false
+  },
+  {
+    "id": "cat_banking",
+    "userId": "usr_demo_alex",
+    "name": "Banking",
+    "iconName": "CreditCard",
+    "color": "amber",
+    "isCustom": false
+  },
+  {
+    "id": "cat_shopping",
+    "userId": "usr_demo_alex",
+    "name": "Shopping",
+    "iconName": "ShoppingBag",
+    "color": "purple",
+    "isCustom": false
+  },
+  {
+    "id": "cat_dev",
+    "userId": "usr_demo_alex",
+    "name": "Development",
+    "iconName": "Code",
+    "color": "cyan",
+    "isCustom": false
+  },
+  {
+    "id": "cat_entertainment",
+    "userId": "usr_demo_alex",
+    "name": "Entertainment",
+    "iconName": "Film",
+    "color": "rose",
+    "isCustom": false
+  },
+  {
+    "id": "cat_social",
+    "userId": "usr_demo_alex",
+    "name": "Social",
+    "iconName": "Share2",
+    "color": "blue",
+    "isCustom": false
+  }
+]

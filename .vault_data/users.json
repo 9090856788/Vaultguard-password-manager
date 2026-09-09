@@ -1,0 +1,14 @@
+[
+  {
+    "id": "usr_demo_alex",
+    "email": "alex.rivera@vaultguard.io",
+    "fullName": "Alex Rivera",
+    "passwordHash": "$2b$10$15Wpwzo/Y.8XOVVriIXrLelLcsx33HJEv0p5U15luUsX3xV0DZupC",
+    "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=256&q=80",
+    "autoLogoutMinutes": 15,
+    "clipboardClearSeconds": 30,
+    "is2FAEnabled": true,
+    "createdAt": "2026-09-02T14:30:00.155Z",
+    "lastLoginAt": "2026-09-02T14:35:06.907Z"
+  }
+]

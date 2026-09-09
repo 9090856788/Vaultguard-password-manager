@@ -1,0 +1,6 @@
+{
+  "name": "VaultGuard - Enterprise Password Manager",
+  "description": "Production-grade password manager and zero-knowledge security vault SaaS with strength analysis, activity timeline, audit logging, and custom categories.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
