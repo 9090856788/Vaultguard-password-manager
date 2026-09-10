@@ -47,7 +47,8 @@ test('vault and vault item reject plaintext secret fields', async () => {
     vaultId,
     ownerUserId: userId,
     metadata: { title: 'Example', tags: [], isFavorite: false, isPinned: false },
-    encryptedSecrets: envelope,
+    encryptedSecrets: { password: envelope },
+    lifecycleState: 'active',
     password: 'must-not-be-persisted',
   }));
 
@@ -55,9 +56,30 @@ test('vault and vault item reject plaintext secret fields', async () => {
     vaultId,
     ownerUserId: userId,
     metadata: { title: 'Example', tags: Array.from({ length: 51 }, (_, index) => `tag-${index}`), isFavorite: false, isPinned: false },
-    encryptedSecrets: envelope,
+    encryptedSecrets: { password: envelope },
+    lifecycleState: 'active',
   });
   await assert.rejects(tooManyTags.validate());
+});
+
+test('preparing vault items may omit encrypted secrets, while active items require them', async () => {
+  const preparing = new VaultItemModel({
+    vaultId,
+    ownerUserId: userId,
+    metadata: { title: 'Preparing', tags: [], isFavorite: false, isPinned: false },
+    lifecycleState: 'preparing',
+    revision: 1,
+  });
+  await assert.doesNotReject(preparing.validate());
+
+  const active = new VaultItemModel({
+    vaultId,
+    ownerUserId: userId,
+    metadata: { title: 'Active', tags: [], isFavorite: false, isPinned: false },
+    lifecycleState: 'active',
+    revision: 1,
+  });
+  await assert.rejects(active.validate());
 });
 
 test('preparing vaults may omit cryptographic material, but verified vaults may not', async () => {

@@ -11,7 +11,8 @@
 4. An item may have no category, but it may not reference a category in a
    different vault.
 5. User email is normalized before uniqueness enforcement.
-6. Final vault secret data is an authenticated encrypted envelope.
+6. Final vault item secret data is a map of authenticated encrypted envelopes;
+   a preparing item contains no encrypted secret fields.
 7. Envelope AAD, item ID, vault ID, key ID, revision, and format version agree.
 8. Revisions are positive integers and update operations use compare-and-set.
 9. Session token hashes are unique and raw refresh tokens never enter a
@@ -64,6 +65,7 @@ after verified key handling.
 | Vault | any active state -> blocked | quarantine or verification failure |
 | VaultItem | active -> deleted | owner-scoped soft delete |
 | VaultItem | deleted -> active | owner-scoped restore, revision checked |
+| VaultItem | preparing -> active | server-issued ID, envelope/AAD validation, revision checked |
 | VaultItem | deleted -> purged | retention and explicit permanent-delete policy |
 | Session | current -> used -> replaced | atomic refresh rotation |
 | Session | current/used -> revoked | logout, password change, admin action, or family reuse |

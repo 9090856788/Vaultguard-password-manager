@@ -1,7 +1,12 @@
 import { model, Schema } from 'mongoose';
 import { EncryptedSecretEnvelope, encryptedSecretEnvelopeSchema, ObjectId } from './common';
 
+export const VAULT_ITEM_SECRET_FIELDS = ['username', 'password', 'notes', 'totp', 'recoveryCodes'] as const;
+export type VaultItemSecretField = typeof VAULT_ITEM_SECRET_FIELDS[number];
+export type EncryptedSecrets = Partial<Record<VaultItemSecretField, EncryptedSecretEnvelope>>;
+
 export interface IVaultItem {
+  _id?: ObjectId;
   legacyId?: string;
   vaultId: ObjectId;
   ownerUserId: ObjectId;
@@ -15,8 +20,9 @@ export interface IVaultItem {
     isFavorite: boolean;
     isPinned: boolean;
   };
-  encryptedSecrets: EncryptedSecretEnvelope;
+  encryptedSecrets?: EncryptedSecrets;
   revision: number;
+  lifecycleState: 'preparing' | 'active' | 'deleted';
   createdAt: Date;
   updatedAt: Date;
   deletedAt?: Date;
@@ -27,7 +33,7 @@ const vaultItemSchema = new Schema<IVaultItem>(
     legacyId: { type: String, trim: true, maxlength: 128 },
     vaultId: { type: Schema.Types.ObjectId, required: true, immutable: true },
     ownerUserId: { type: Schema.Types.ObjectId, required: true, immutable: true },
-    metadata: {
+    metadata: new Schema({
       title: { type: String, required: true, trim: true, minlength: 1, maxlength: 240 },
       websiteUrl: { type: String, trim: true, maxlength: 2048 },
       categoryId: { type: Schema.Types.ObjectId },
@@ -41,9 +47,19 @@ const vaultItemSchema = new Schema<IVaultItem>(
       websiteLogo: { type: String, trim: true, maxlength: 2048 },
       isFavorite: { type: Boolean, required: true, default: false },
       isPinned: { type: Boolean, required: true, default: false },
+    }, { _id: false, strict: 'throw' }),
+    encryptedSecrets: {
+      type: new Schema({
+        username: { type: encryptedSecretEnvelopeSchema },
+        password: { type: encryptedSecretEnvelopeSchema },
+        notes: { type: encryptedSecretEnvelopeSchema },
+        totp: { type: encryptedSecretEnvelopeSchema },
+        recoveryCodes: { type: encryptedSecretEnvelopeSchema },
+      }, { _id: false, strict: 'throw' }),
+      required: function (this: IVaultItem) { return this.lifecycleState !== 'preparing'; },
     },
-    encryptedSecrets: { type: encryptedSecretEnvelopeSchema, required: true },
     revision: { type: Number, required: true, min: 1, default: 1 },
+    lifecycleState: { type: String, required: true, enum: ['preparing', 'active', 'deleted'] },
     deletedAt: { type: Date },
   },
   { timestamps: true, versionKey: false, strict: 'throw', collection: 'vaultItems' },

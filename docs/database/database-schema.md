@@ -171,6 +171,7 @@ secret data.
     aad: string
   },
   revision: number,
+  lifecycleState: "preparing" | "active" | "deleted",
   createdAt: Date,
   updatedAt: Date,
   deletedAt?: Date
