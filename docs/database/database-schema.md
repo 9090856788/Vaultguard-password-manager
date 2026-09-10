@@ -150,17 +150,18 @@ secret data.
   legacyId?: string,
   vaultId: ObjectId,
   ownerUserId: ObjectId,          // denormalized authorization guard
+  lifecycleState: "preparing" | "active" | "deleted",
   metadata: {
     title: string,
     websiteUrl?: string,
     categoryId?: ObjectId,
     tags: string[],
     colorLabel?: string,
-    websiteLogo?: string,
+    websiteLogo?: string,         // bounded public metadata
     isFavorite: boolean,
     isPinned: boolean
   },
-  encryptedSecrets: {
+  encryptedSecrets?: {
     version: number,
     keyId: string,
     algorithm: "AES-256-GCM",
@@ -176,17 +177,42 @@ secret data.
 }
 ```
 
-`encryptedSecrets` contains username, email, password, secure notes, TOTP
-secrets, recovery material, and secret-bearing custom fields. The searchable
-server metadata is intentionally limited to fields needed for listing and
-authorization. Secret search, password strength, reuse analysis, and
-decryption occur client-side after the vault is unlocked.
+`lifecycleState` is persisted so that item preparation and finalization are
+explicit server-side state transitions. A newly prepared item is `preparing`
+and has a server-issued MongoDB `_id` before the client constructs the
+canonical G5.3 AAD and encrypts its secret payload. `encryptedSecrets` is
+conditionally absent while an item is `preparing`; it is required before an
+item can become `active`. A `deleted` item is soft-deleted and remains subject
+to the approved retention and explicit permanent-delete policy.
+
+The client owns Vault Master Password handling, KEK derivation, VEK unwrap,
+secret encryption, and secret decryption. The server never receives the Vault
+Master Password, plaintext KEK, plaintext VEK, or plaintext vault secrets. The
+server persists only the encrypted secret envelope and its non-secret
+metadata. The envelope uses AES-256-GCM and the G5.3 canonical AAD binding
+purpose, vault ID, item ID, field scope, revision, key ID, and format version.
+Unknown or unsupported envelope versions fail closed.
+
+The accepted metadata fields are exactly `title`, `websiteUrl`, `categoryId`,
+`tags`, `colorLabel`, `websiteLogo`, `isFavorite`, and `isPinned`, subject to
+bounded validation. `websiteLogo` is retained only as bounded public metadata
+and is never a secret-bearing field. Secret-bearing fields are represented only
+inside the encrypted envelope; plaintext password, notes, TOTP, recovery, or
+custom secret fields are not target schema fields.
+
+Item ownership is enforced using the authenticated owner, the parent vault,
+and the denormalized `ownerUserId`. Item creation, finalization, update,
+soft-delete, and restore are owner-scoped. Concurrent encrypted updates use
+revision-based compare-and-set; stale `If-Match` values are conflicts and
+must not be resolved with last-write-wins behavior. Restore is an explicit
+owner-scoped CAS operation from `deleted` to `active`.
 
 There is no unique `{ host, vaultId }` index. Multiple credentials for one
-host are valid. Revision updates are optimistic-concurrency checked and must
-not overwrite a newer revision. Version history is either encrypted inside a
-versioned item envelope or stored as separately encrypted history records in
-a later approved change; it must never be plaintext.
+host are valid. Secret search, password strength, reuse analysis, and
+decryption occur client-side after verified vault unlock. Version history is
+not introduced by G5.4.2; if a later implementation requires a separate
+encrypted history collection, that architecture change requires explicit
+approval and must never create plaintext history.
 
 ## 4. categories
 
@@ -301,3 +327,29 @@ All encrypted envelopes must carry version, key ID, algorithm, fresh random
 the purpose, vault ID, item ID where applicable, field scope, and revision.
 Unknown versions fail closed. No schema field may be named `password` or
 `notes` in a final secret-bearing target record.
+
+## G5.4.2 VaultItem Lifecycle Contract
+
+The approved G5.4.2 contract extends the G4 target without adding a new
+preparation collection:
+
+1. **Prepare:** server authenticates the owner, validates the exact metadata
+   allowlist, allocates and persists the MongoDB item `_id`, and creates a
+   `preparing` item. No plaintext secret is accepted or persisted.
+2. **Client encryption:** the browser/client derives or unwraps keys locally,
+   constructs G5.3 canonical AAD using the server-issued item ID, and encrypts
+   the secret payload with AES-256-GCM.
+3. **Finalize:** the server accepts only the approved encrypted envelope,
+   verifies envelope metadata/AAD bindings and ownership, and atomically
+   transitions `preparing -> active` using the expected revision.
+4. **Update:** active encrypted data is replaced only through owner-scoped
+   revision CAS. A stale `If-Match` is a conflict; last-write-wins is not
+   permitted.
+5. **Delete/restore:** soft delete and restore are owner-scoped CAS operations
+   with explicit lifecycle transitions. Physical deletion remains an
+   operational process and is not a cryptographic-erasure claim.
+
+The exact request field allowlists are part of the G5.4.2 API contract. Unknown
+fields and sensitive plaintext-looking fields must fail closed without being
+logged or echoed. A separate encrypted history collection is future scope only
+and is not authorized by G5.4.2.
