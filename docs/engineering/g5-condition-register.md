@@ -93,6 +93,56 @@ tokens, real OAuth/client secrets, or recovery credentials. `.env.example`
 contains dummy placeholders only. Production startup fails closed when required
 secrets are missing.
 
+## G5.4.2 Frozen VaultItem Contract
+
+The following decisions are approved for G5.4.2 implementation and must not be
+silently weakened or reinterpreted:
+
+1. `VaultItem.lifecycleState` is persisted with the states `preparing`,
+   `active`, and `deleted`.
+2. Preparation persists a server-generated MongoDB `_id` before client-side
+   encryption. No separate preparation collection is introduced.
+3. `encryptedSecrets` is conditionally absent only while an item is
+   `preparing`; it is required for `active` items.
+4. The client exclusively handles the Vault Master Password, KEK, VEK,
+   encryption, and decryption. The server never unlocks the vault or receives
+   plaintext vault secrets.
+5. VaultItem metadata has an exact allowlist: `title`, `websiteUrl`,
+   `categoryId`, `tags`, `colorLabel`, `websiteLogo`, `isFavorite`, and
+   `isPinned`. `websiteLogo` is bounded public metadata.
+6. Encrypted secret data uses AES-256-GCM and the G5.3 canonical AAD. AAD and
+   envelope metadata must bind the approved vault/item/revision/key/version
+   context.
+7. Item creation/finalization, update, soft delete, and restore are
+   owner-scoped. Parent vault and category ownership must agree.
+8. Encrypted updates use revision-based `If-Match` compare-and-set. Stale
+   revisions are conflicts; last-write-wins is forbidden.
+9. Restore is part of G5.4.2 and requires owner scope plus CAS.
+10. Unknown request fields and plaintext-secret-looking fields must fail closed
+    and must not be logged or echoed.
+11. No plaintext secret, raw key, password, token, recovery code, or plaintext
+    encrypted-history record may be persisted or logged.
+12. A separate encrypted history collection is future scope only. G5.4.2 may
+    not introduce it without a new architecture approval.
+
+### G5.4.2 Lifecycle
+
+```text
+server prepare
+    -> preparing (server-issued item ID)
+    -> client encrypts with G5.3 contract
+    -> server finalize + CAS
+    -> active
+    -> delete + CAS
+    -> deleted
+    -> restore + CAS
+    -> active
+```
+
+The finalization boundary is the point at which the server may require
+`encryptedSecrets`. Failed or divergent preparation/finalization requests must
+not create an alternate persistence path or accept plaintext secrets.
+
 ## Frozen G3/G4 Security and Architecture Rules
 
 1. Account Authentication Password and Vault Master Password are separate.
